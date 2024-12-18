@@ -1,2 +1,5 @@
 https://github.com/hertz-hwang/Rime-tiger_code
 自用改，上为原作者项目地址
+
+AMZ训练模型下载页面
+https://huggingface.co/hertz-hwang/amz-v1-5-zh-hans
