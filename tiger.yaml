@@ -1,0 +1,835 @@
+# tiger-code config
+
+########################
+#        模型配置       #
+########################
+
+octagram:
+  disable:
+    __patch:
+      grammar: {}
+  enable_for_chars: #参数较极端，仅适用于虎单整句方案，音码方案不建议尝试
+    __patch:
+      grammar:
+        language: amz-v1-5-zh-hans
+        collocation_max_length: 6
+        collocation_min_length: 4
+        collocation_penalty: -15
+        non_collocation_penalty: -2
+        weak_collocation_penalty: -23
+        rear_penalty: -18
+      translator/+:
+        contextual_suggestions: false  # 设置为false，避免二简混乱，如："kw" 首选变成 “能得” 等
+        max_homophones: 4
+        max_homographs: 0
+
+  enable_for_words: #用于词句的参数，未定
+    __patch:
+      grammar:
+        language: amz-v3n2m1-zh-hans
+      translator/+:
+        contextual_suggestions: true
+        max_homophones: 7
+        max_homographs: 7
+
+########################
+#      整句词库选择      #
+########################
+dicts:
+  __patch:
+    dictionary: tiger_phrase_wanxiang  # 也可以选择 tiger_phrase_moran，则使用魔然词库
+    prism: tiger_phrase_wanxiang
+
+########################
+# 反查方案选择，只能选一个 #
+########################
+pinyin:
+  __patch:
+    #- algebra_py        # 全拼
+    #- algebra_zrm      # 自然码双拼
+    - algebra_flypy    # 小鹤双拼
+    #- algebra_sogou    # 搜狗双拼
+    #- algebra_mspy     # 微软双拼
+    #- algebra_abc      # 智能ABC双拼
+    #- algebra_ziguang  # 紫光双拼
+    #- algebra_lx17     # 乱序17
+
+# 说明
+# xform  --改寫〔不保留原形〕
+# derive --衍生〔保留原形〕
+# abbrev --簡拼〔出字優先級較上兩組更低〕
+# fuzz   --畧拼〔此種簡拼僅組詞，不出單字〕
+# xlit   --變換〔適合大量一對一變換〕
+# erase  --刪除
+algebra:
+  core:                                           # 核心单字
+    __append:
+      #- derive|^(\w)(\w)\[(\w)(\w)$|$1$2$3$4|     # 匹配4码
+      #- derive|^(\w)(\w)\[(\w)(\d)$|$1$2$3|       # 匹配3码
+      #- derive|^(\w)(\w)\[(\d)(\d)$|$1$2|         # 匹配2码
+      #- derive|^(\w)(\d)\[(\d)(\d)$|$1|           # 匹配1码
+
+  phrase:                                         # 单字整句
+    __append:
+      #- derive|^(\w)(\d)\[(\d)(\d)$|$1U|          # 短语匹配1码
+      #- derive|^(\w)(\w)\[(\d)(\d)$|$1$2I|        # 短语匹配2码
+      #- derive|^(\w)(\w)\[(\w)(\d)$|$1$2$3O|      # 短语匹配3码
+      #- derive|^(\w)(\w)\[(\w)(\w)$|$1$2$3$4P|    # 短语匹配4码
+      - derive|^(\w{1})$|$1U|                     # 短语匹配1码
+      - derive|^(\w{2})$|$1I|                     # 短语匹配2码
+      - derive|^(\w{3})$|$1O|                     # 短语匹配3码
+      - derive|^(\w{4})$|$1P|                     # 短语匹配4码
+
+  phrases:                                        # 虎词整句        
+    __append:
+      - derive|^(\w)$|$1U|                        # 短语匹配1码
+      - derive|^(\w)(\w)$|$1$2I|                  # 短语匹配2码
+      - derive|^(\w)(\w)(\w)$|$1$2$3O|            # 短语匹配3码
+      - derive|^(\w)(\w)(\w)(\w)$|$1$2$3$4P|      # 短语匹配4码
+      - derive|^(\w)$|$1|                         # 短语匹配1码
+      - derive|^(\w)(\w)$|$1$2|                   # 短语匹配2码
+      - derive|^(\w)(\w)(\w)$|$1$2$3|             # 短语匹配3码
+      - derive|^(\w)(\w)(\w)(\w)$|$1$2$3$4|       # 短语匹配4码
+
+  wildcard:                                       # 通配符 （影响部署时间，默认关闭）
+    __append:
+      - derive|^(\w)(\w)\[(\w)(\w)$|~$2$3$4|      # 1码通配
+      - derive|^(\w)(\w)\[(\w)(\w)$|~$2$3|        # 1码通配
+      - derive|^(\w)(\w)\[(\w)(\w)$|~$2|          # 1码通配
+      - derive|^(\w)(\w)\[(\w)(\w)$|$1~$3$4|      # 1码通配
+      - derive|^(\w)(\w)\[(\w)(\w)$|$1~$3|        # 1码通配
+      - derive|^(\w)(\w)\[(\w)(\w)$|$1~|          # 1码通配
+      - derive|^(\w)(\w)\[(\w)(\w)$|$1$2~$4|      # 1码通配
+      - derive|^(\w)(\w)\[(\w)(\w)$|$1$2~|        # 1码通配
+      - derive|^(\w)(\w)\[(\w)(\w)$|$1$2$3~|      # 1码通配
+      - derive|^(\w)(\w)\[(\w)(\w)$|~~$3$4|       # 2码通配
+      - derive|^(\w)(\w)\[(\w)(\w)$|~~$3|         # 2码通配
+      - derive|^(\w)(\w)\[(\w)(\w)$|~~|           # 2码通配
+      - derive|^(\w)(\w)\[(\w)(\w)$|~$2~$4|       # 2码通配
+      - derive|^(\w)(\w)\[(\w)(\w)$|~$2~|         # 2码通配
+      - derive|^(\w)(\w)\[(\w)(\w)$|~$2$3~|       # 2码通配
+      - derive|^(\w)(\w)\[(\w)(\w)$|$1~~$4|       # 2码通配
+      - derive|^(\w)(\w)\[(\w)(\w)$|$1~~|         # 2码通配
+      - derive|^(\w)(\w)\[(\w)(\w)$|$1~$3~|       # 2码通配
+      - derive|^(\w)(\w)\[(\w)(\w)$|$1$2~~|       # 2码通配
+      - derive|^(\w)(\w)\[(\w)(\w)$|~~~$4|        # 3码通配
+      - derive|^(\w)(\w)\[(\w)(\w)$|~~~|          # 3码通配
+      - derive|^(\w)(\w)\[(\w)(\w)$|~~$3~|        # 3码通配
+      - derive|^(\w)(\w)\[(\w)(\w)$|~$2~~|        # 3码通配
+      - derive|^(\w)(\w)\[(\w)(\w)$|$1~~~|        # 3码通配
+      - derive|^(\w)(\w)\[(\w)(\w)$|~~~~|         # 4码通配
+  erase:
+    __append:
+      - erase|^(\w+)\[(\w+)$|                     # 刪除原始編碼以加速檢索
+
+switches_engine_table:
+  switches:
+    __include: switches_list
+  engine:
+    processors:
+      - predictor
+      - ascii_composer                              # 处理英文模式及中英文切换
+      - recognizer                                  # 与 matcher 搭配，处理符合特定规则的输入码，如网址、反查等
+      - lua_processor@*hertz.tiger_spelling*processor # 注解处理器
+      - key_binder                                  # 在特定条件下将按键绑定到其他按键，如重定义逗号、句号为候选翻页键
+      - speller                                     # 把字母追加到编码串
+      - punctuator                                  # 处理符号按键
+      - selector                                    # 选字和换页功能
+      - navigator                                   # 移动插入点
+      - express_editor                              # 空格确认当前输入，其他字符直接上屏
+    segmentors:
+      - ascii_segmentor
+      - matcher
+      - affix_segmentor@easy_en                     # 英文
+      - affix_segmentor@japanese                    # 日文
+      - affix_segmentor@radical_flypy               # 部件拆字
+      - affix_segmentor@tiger_codes                 # 官方虎词
+      - affix_segmentor@tiger_oni                   # 九重鬼虎
+      - affix_segmentor@tiger_phrase                # 赫兹虎单整句
+      - affix_segmentor@tiger_phrases               # 官方虎词整句
+      - abc_segmentor                               # 标记输入码的类型
+      - punct_segmentor                             # 割界，与前后方的其他编码区分开
+      - fallback_segmentor
+    translators:
+      - predict_translator
+      - punct_translator                            # 转换标点符号
+      - reverse_lookup_translator                   # 拼音反查
+      - table_translator                            # 码表转换
+      - table_translator@easy_en                    # 英文
+      - table_translator@fast_symbol                # 码表转换-快符
+      - script_translator@tiger_phrase              # 赫兹虎单整句
+      - history_translator@input_history            # 输入历史
+      - lua_translator@*hertz.time_translator       # 时间
+    filters:
+      - lua_filter@*hertz.charset_filter            # 字集过滤
+      - lua_filter@*hertz.mark_phrase_filter        # 标记词组
+      - lua_filter@*hertz.tiger_spelling*filter     # 注解滤镜
+      - simplifier@s2t                              # 简繁滤镜
+      - simplifier@emoji                            # Emoji滤镜
+      - simplifier@mars                             # 火星文滤镜
+      #- lua_filter@*hertz.inline_candidate_filter   # 部件内嵌
+      - uniquifier                                  # 过滤重复的候选字，可能来自简繁转换
+      - lua_filter@*hertz.easy_en*enhance_filter    # 英文增强
+      - lua_filter@*hertz.embeded_cands@embeded_cands
+
+switches_engine_script:
+  switches:
+    __include: switches_list
+  engine:
+    processors:
+      - predictor
+      - ascii_composer                              # 处理英文模式及中英文切换
+      - recognizer                                  # 与 matcher 搭配，处理符合特定规则的输入码，如网址、反查等
+      - lua_processor@*hertz.tiger_spelling*processor # 注解处理器
+      - key_binder                                  # 在特定条件下将按键绑定到其他按键，如重定义逗号、句号为候选翻页键
+      - speller                                     # 把字母追加到编码串
+      - punctuator                                  # 处理符号按键
+      - selector                                    # 选字和换页功能
+      - navigator                                   # 移动插入点
+      - express_editor                              # 空格确认当前输入，其他字符直接上屏
+    segmentors:
+      - ascii_segmentor
+      - matcher
+      - affix_segmentor@easy_en                     # 英文
+      - affix_segmentor@tiger_phrase                # 赫兹虎单整句
+      - abc_segmentor                               # 标记输入码的类型
+      - punct_segmentor                             # 割界，与前后方的其他编码区分开
+      - fallback_segmentor
+    translators:
+      - predict_translator
+      - punct_translator                            # 转换标点符号
+      - reverse_lookup_translator                   # 拼音反查
+      - table_translator@radical_flypy              # 部件拆字
+      - table_translator@fast_symbol                # 码表转换-快符
+      - script_translator@tiger_phrase              # 赫兹虎单整句
+      - script_translator                           # 码表转换
+      - history_translator@input_history            # 输入历史
+      - lua_translator@*hertz.time_translator       # 时间
+    filters:
+      - lua_filter@*hertz.charset_filter            # 字集过滤
+      - lua_filter@*hertz.mark_phrase_filter        # 标记词组
+      #- lua_filter@*hertz.tiger_spelling*filter     # 注解滤镜
+      - simplifier@s2t                              # 简繁滤镜
+      - simplifier@emoji                            # Emoji滤镜
+      - simplifier@mars                             # 火星文滤镜
+      #- lua_filter@*hertz.inline_candidate_filter   # 部件内嵌
+      - uniquifier                                  # 过滤重复的候选字，可能来自简繁转换
+
+keys:
+  emacs_mode:
+    __append:
+      - { when: composing, accept: Control+p, send: Up }
+      - { when: composing, accept: Control+n, send: Down }
+      - { when: composing, accept: Control+b, send: Left }
+      - { when: composing, accept: Control+f, send: Right }
+      - { when: composing, accept: Control+a, send: Home }
+      - { when: composing, accept: Control+e, send: End }
+      - { when: composing, accept: Control+d, send: Delete }
+      - { when: composing, accept: Control+k, send: Shift+Delete }
+      - { when: composing, accept: Control+h, send: BackSpace }
+      - { when: composing, accept: Control+g, send: Escape }
+      - { when: composing, accept: Control+bracketleft, send: Escape }
+      - { when: composing, accept: Control+y, send: Page_Up }
+      - { when: composing, accept: Alt+v, send: Page_Up }
+      - { when: composing, accept: Control+v, send: Page_Down }
+  tab:
+    __append:
+      - { when: has_menu, accept: "Tab", send: "Control+Right" }
+      - { when: composing, accept: "Tab", send: "Control+Right" }
+  page_up_down:
+    __append:
+      - { when: paging, accept: bracketleft, send: Page_Up }      # [ 后翻
+      - { when: has_menu, accept: bracketright, send: Page_Down } # ] 前翻
+      - { when: paging, accept: minus, send: Page_Up }            # - 后翻
+      - { when: has_menu, accept: equal, send: Page_Down }        # = 前翻
+      - { when: has_menu, accept: KP_Enter, send: Return } #自改小键盘回车字母上屏
+  selector:
+    __append:
+      - { when: has_menu, accept: semicolon, send: KP_2 }  # 分号次选
+      #- { when: has_menu, accept: apostrophe, send: KP_3 } # 引号三选
+      #- { when: composing, accept: Tab, send: Escape }     # tab清屏
+  options_toggle:
+    __append:
+      - { when: has_menu, accept: "/", toggle: tiger_spelling.off }          # 四重注解
+      - { when: always, accept: "Control+p", toggle: prediction }            # 预测开关
+      - { when: always, accept: "Control+b", toggle: extended_char }         # 字集滤镜
+      - { when: always, accept: "Control+o", toggle: traditionalization }    # 简繁滤镜
+      - { when: always, accept: "Control+i", toggle: emoji }                 # Emoji开关
+      - { when: always, accept: "Control+e", toggle: chinese_english }       # 翻译
+      - { when: always, accept: "Control+m", toggle: mars }                  # 火星文开关
+
+dict_All_false:
+  enable_user_dict: false
+  enable_charset_filter: false
+  enable_encoder: false
+  enable_sentence: false
+  encode_commit_history: false
+  enable_completion: false
+
+fast_symbol_translator:
+  fast_symbol:
+    dictionary: fast_symbol
+    __include: dict_All_false
+
+easy_en_translator:
+  easy_en:
+    dictionary: easy_en
+    tag: easy_en
+    split_sentence: true
+    prefix: "'"
+    tips: "〔英文〕"
+    enable_sentence: true
+    enable_encoder: false
+    encode_commit_history: false
+    enable_completion: true
+    enable_user_dict: false
+    preedit_format:
+      - xlit|_| |
+    comment_format:
+      - xlit|_| |
+
+japanese_translator:
+  japanese:
+    dictionary: japanese
+    tag: japanese
+    prefix: "J"
+    tips: "〔日本語ローマ字〕"
+    __include: dict_All_false
+
+tiger_codes_translator:
+  tiger_codes:
+    dictionary: tiger_codes
+    tag: tiger_codes
+    prefix: "D"
+    tips: "〔官方虎词〕"
+    __include: dict_All_false
+
+tiger_oni_translator:
+  tiger_oni:
+    dictionary: tiger_oni
+    tag: tiger_oni
+    prefix: "G"
+    tips: "〔九重鬼虎〕"
+    __include: dict_All_false
+
+tiger_phrase_translator:
+  tiger_phrase:
+    dictionary: tiger_phrase_wanxiang
+    tag: tiger_phrase
+    prefix: "H"
+    tips: "〔赫兹虎单整句〕"
+    __include: dict_All_false
+    preedit_format:
+      # 手动分词标记
+      - xform/([a-z]{4})[P']/$1⁴/
+      - xform/([a-z]{3})[O']/$1³/
+      - xform/([a-z]{2})[I']/$1²/
+      - xform/([a-z]{1})[U']/$1¹/
+      # 自动分词标记
+      - xform/([a-z]{1,4})[_]/$1␣/
+      # 其余处理
+      - xform/([¹²³⁴][a-z]+)[_']/$1/
+      - xform/([¹²³⁴])_/$1/
+
+tiger_phrases_translator:
+  tiger_phrases:
+    dictionary: tiger_phrases
+    tag: tiger_phrases
+    prefix: "F"
+    tips: "〔官方虎词整句〕"
+    __include: dict_All_false
+    preedit_format:
+      # 手动分词标记
+      - xform/([a-z]{4})[P']/$1⁴/
+      - xform/([a-z]{3})[O']/$1³/
+      - xform/([a-z]{2})[I']/$1²/
+      - xform/([a-z]{1})[U']/$1¹/
+      # 自动分词标记
+      - xform/([a-z]{1,4})[_]/$1␣/
+      # 其余处理
+      - xform/([¹²³⁴][a-z]+)[_']/$1/
+      - xform/([¹²³⁴])_/$1/
+
+reverse_lookup_translator_xh:
+  reverse_lookup:
+    dictionary: pinyin
+    prefix: "`"
+    tips: "〔拼音〕"
+    preedit_format:
+      - "xform/([nl])v/$1ü/"
+      - "xform/([nl])ue/$1üe/"
+      - "xform/([jqxy])v/$1u/"
+    comment_format:
+      - xform|^||
+      - xform|0||
+      - xform|[[]||
+
+radical_flypy_translator:
+  radical_flypy:
+    dictionary: radical_flypy
+    tag: radical_flypy
+    prefix: "R"
+    tips: "〔部件拆字〕"
+    enable_user_dict: false
+    enable_charset_filter: false
+    enable_encoder: false
+    enable_sentence: false
+    encode_commit_history: false
+    enable_completion: true
+
+s2t_filter:
+  s2t:
+    opencc_config: filter_s2t/st_tu.json
+    option_name: traditionalization
+    tips: all
+
+history_filter:
+  input_history:
+    input: 'z'
+    size: 1
+    initial_quality: 0
+
+emoji_filter:
+  emoji:
+    opencc_config: filter_emoji/emoji.json
+    option_name: emoji
+    tips: all
+
+cn_en_filter:
+  chinese_english:
+    opencc_config: filter_cn_en/chinese_english.json
+    option_name: chinese_english
+    tips: char
+    comment_format:
+      - "xform/-/ /"
+
+mars_filter:
+  mars:
+    opencc_config: filter_mars/mars.json
+    option_name: mars
+
+embeded_cands_filter:
+  embeded_cands:
+    option_name: embeded_cands                               # 嵌入候選開關
+    index_indicators: [ ¹, ², ³, ⁴, ⁵, ⁶, ⁷, ⁸, ⁹, ⁰ ]       # 嵌入候選的序號顯示格式
+    first_format: "${Stash}[${候選}${Seq}]${Code}${Comment}" # 首選的渲染格式
+    next_format: "${Stash}${候選}${Seq}${Comment}"           # 非首選的渲染格式
+    separator: " "                                           # 候選之間的分隔符
+    stash_placeholder: "~"
+
+rec:
+  recognizer:
+    import_preset: default
+    patterns:
+      punct: '^/([0-9]0?|[A-Za-z]+)$'
+      easy_en: "^'[A-Z|a-z]*`?$"
+      japanese: "^J[_|A-Z|a-z|-]*`?$"
+      radical_flypy: "^R[a-z]*`?$"
+      tiger_codes: "^D[a-z]*`?$"
+      tiger_oni: "^G[a-z]*`?$"
+      tiger_phrase: "^H[a-zA-Z]*`?$"
+      tiger_phrases: "^F[a-zA-Z]*`?$"
+      reverse_lookup: "^`[a-z]*'?$"
+      calculator: "^=.*$"
+
+hertz:
+  predictor:
+    db: predict.db
+    max_candidates: 999
+    max_iterations: 999
+
+switches_list:
+  - name: ascii_mode
+    reset: 0
+    states: [ 中, 英 ]
+  - name: traditionalization
+    states: [ 简, 繁 ]
+  - name: emoji
+    states: [ 🈚, 🈶 ]
+  - name: embeded_cands
+    states: [ ☐嵌入, ☑嵌入 ]               
+    reset: 0
+  - name: extended_char
+    states: [ 全字集, 常用字 ]
+  - name: mars
+    states: [ 地球文, 火星文 ]
+  - name: prediction
+    states: [ 预测关闭, 预测开启 ]
+  - options:
+      - tiger_spelling.off
+      - tiger_spelling.lv1
+      - tiger_spelling.lv2
+      - tiger_spelling.lv3
+      - tiger_spelling.lv4
+    states: [ 〇注解, 一重注解, 二重注解, 三重注解, 四重注解 ]
+  - name: full_shape
+    reset: 0
+    states: [ 半角, 全角 ]
+  - name: ascii_punct
+    reset: 0
+    states: [ 。，, ．， ]
+ 
+
+ 
+punctuator:
+  
+  full_shape:
+    ' ' : { commit: '　' }
+    ',' : { commit: ， }
+    '.' : { commit: 。 }
+    '<' : [ 《, 〈, «, ‹ ]
+    '>' : [ 》, 〉, », › ]
+    '/' : [ ／, ÷ ]
+    '?' : { commit: ？ }
+    ';' : { commit: ； }
+    ':' : { commit: ： }
+    '''' : { pair: [ '‘', '’' ] }
+    '"' : { pair: [ '“', '”' ] }
+    '\' : 、 #[ 、, ＼ ]
+    '|' : [ ｜, ·, '§', '¦' ]
+    '`' : ｀
+    #'~' : ～
+    '!' : { commit: ！ }
+    '@' : ＠ #[ ＠, ☯ ]
+    '#' : ＃ #[ ＃, ⌘ ]
+    #'%' : [ ％, '°', '℃' ]
+    #'$' : [ ￥, '$', '€', '£', '¥', '¢', '¤', ₩ ]
+    '$' : { commit: ￥ }
+    '^' : { commit: …… }
+    '&' : ＆
+    '*' : ＊ #[ ＊, ·, ・, ×, ※, ❂ ]
+    '(' : （
+    ')' : ）
+    '-' : －
+    '_' : _
+    '+' : ＋
+    #'=' : [ ＝, 々, 〃 ]
+    '[' : [ 【, 〔, 「, ［ ] #, 〚, 〘
+    ']' : [ 】, 〕, 」, ］] #, 〛, 〙
+    '{' : [ "{", 〖, 『 , ｛ ]
+    '}' : [ "}", 〗, 』 , ｝ ]
+  half_shape:
+    ',' : { commit: ， }
+    '.' : { commit: . }
+    '<' : [ 《, 〈, «, ‹, ˂, ˱ ]
+    '>' : [ 》, 〉, », ›, ˃, ˲ ]
+    '/' : [ '/', ÷ ]
+    '?' : { commit: ？ }
+    ';' : { commit: ； }
+    ':' : { commit: ： }
+    '''' : { pair: [ '‘', '’' ] }
+    '"' : { pair: [ '“', '”' ] }
+    '\' : { commit: 、 } #[ 、, '\', ＼ ]
+    '|' : [ '|', ·, '·' , ｜, '§', '¦', '‖', ︴ ]
+    #'`' : [ '`', ·, ‵, ‶, ‷, ′, ″, ‴, ⁗ ]
+    #'~' : [ '~', ～, ˜, ˷, ⸯ, ≈, ≋, ≃, ≅, ≇, ∽, ⋍, ≌, ﹏, ﹋, ﹌, ︴ ]
+    '!' : { commit: ！ }
+    '@' : '@' #[ '@', ©, ®, ℗ ]
+    '#' : '#' #[ '#', № ]
+    #'%' : [ '%', ％, '°', '℃', ‰, ‱, ℉, ℅, ℆, ℀, ℁, ⅍ ]
+    #'$' : [ ￥, '$', '€', '£', '¥', '¢', '¤', ₩ ]
+    '$' : { commit: ￥ }
+    '^' : { commit: …… }
+    '&' : '&'
+    '*' : '*' #[ '*', ＊, ·, ‧, ・, ･, ×, ※, ❂, ⁂, ☮, ☯, ☣ ]
+    '(' : （
+    ')' : ）
+    '-' : '-'
+    '_' : _
+    '+' : '+'
+    #'=' : [ '=', 々, 〃 ]
+    '[' : 【 #[ 【, 〔, 「, ［ ] #, 〚, 〘
+    ']' : 】 #[ 】, 〕, 」, ］] #, 〛, 〙
+    '{' : [ "{", 〖, 『 , ｛ ]
+    '}' : [ "}", 〗, 』 , ｝ ]
+  symbols:
+    '/im' : [ '[IMPORTANT]' ]    
+    '/wa' : [ '[WARNING]' ]    
+    '/ti' : [ '[TIP]' ]    
+    '/no' : [ '[NOTE]' ]    
+    '/ca' : [ '[CAUTION]' ]    
+    '/qa' : [ '[qanda]' ]    
+    '/sm' : [ '[.small]##' ]    
+    '/bi' : [ '[.big]##' ]    
+    '/lt' : [ '[.line-through]##' ]    
+    '/ul' : [ '[.underline]##' ]    
+    '/ol' : [ '[overline]##' ]    
+    '/yl' : [ '[yellow]##' ]    
+    '/rl' : [ '[red yellow-background]##' ]    
+    '/le' : [ '[.lead]' ]    
+    '/xx' : [ '****' ]    
+    '/ms' : [ ' :: ' ]    
+    
+algebra_py:
+  __append:
+    - xlit/āáǎàōóǒòēéěèīíǐìūúǔùǖǘǚǜü/aaaaooooeeeeiiiiuuuuvvvvv/
+    - xform/ń|ň|ǹ/en/
+    - xform/\bn\b/en/
+    - xform/ńg|ňg|ǹg/en/
+
+algebra_zrm: 
+  __append:
+    - xlit/āáǎàōóǒòēéěèīíǐìūúǔùǖǘǚǜü/aaaaooooeeeeiiiiuuuuvvvvv/
+    - xform/ń|ň|ǹ/en/
+    - xform/\bn\b/en/
+    - xform/ńg|ňg|ǹg/en/
+    - derive/^([jqxy])u$/$1v/
+    - derive/^([aoe])([ioun])$/$1$1$2/
+    - xform/^([aoe])(ng)?$/$1$1$2/
+    - xform/iu$/Ⓠ/
+    - xform/[iu]a$/Ⓦ/
+    - xform/[uv]an$/Ⓡ/
+    - xform/[uv]e$/Ⓣ/
+    - xform/ing$|uai$/Ⓨ/
+    - xform/^sh/Ⓤ/
+    - xform/^ch/Ⓘ/
+    - xform/^zh/Ⓥ/
+    - xform/uo$/Ⓞ/
+    - xform/[uv]n$/Ⓟ/
+    - xform/(.)i?ong$/$1Ⓢ/
+    - xform/[iu]ang$/Ⓓ/
+    - xform/(.)en$/$1Ⓕ/
+    - xform/(.)eng$/$1Ⓖ/
+    - xform/(.)ang$/$1Ⓗ/
+    - xform/ian$/Ⓜ/
+    - xform/(.)an$/$1Ⓙ/
+    - xform/iao$/Ⓒ/
+    - xform/(.)ao$/$1Ⓚ/
+    - xform/(.)ai$/$1Ⓛ/
+    - xform/(.)ei$/$1Ⓩ/
+    - xform/ie$/Ⓧ/
+    - xform/ui$/Ⓥ/
+    - xform/(.)ou$/$1Ⓑ/
+    - xform/in$/Ⓝ/
+    - xlit/ⓆⓌⓇⓉⓎⓊⒾⓄⓅⓈⒹⒻⒼⒽⓂⒿⒸⓀⓁⓏⓍⓋⒷⓃ/qwrtyuiopsdfghmjcklzxvbn/
+
+algebra_flypy: 
+  __append:
+    - xlit/āáǎàōóǒòēéěèīíǐìūúǔùǖǘǚǜü/aaaaooooeeeeiiiiuuuuvvvvv/
+    - xform/ń|ň|ǹ/en/
+    - xform/\bn\b/en/
+    - xform/ńg|ňg|ǹg/en/
+    - derive/^([jqxy])u$/$1v/
+    - derive/^([aoe])([ioun])$/$1$1$2/
+    - xform/^([aoe])(ng)?$/$1$1$2/
+    - xform/iu$/Ⓠ/
+    - xform/(.)ei$/$1Ⓦ/
+    - xform/uan$/Ⓡ/
+    - xform/[uv]e$/Ⓣ/
+    - xform/un$/Ⓨ/
+    - xform/^sh/Ⓤ/
+    - xform/^ch/Ⓘ/
+    - xform/^zh/Ⓥ/
+    - xform/uo$/Ⓞ/
+    - xform/ie$/Ⓟ/
+    - xform/(.)i?ong$/$1Ⓢ/
+    - xform/ing$|uai$/Ⓚ/
+    - xform/(.)ai$/$1Ⓓ/
+    - xform/(.)en$/$1Ⓕ/
+    - xform/(.)eng$/$1Ⓖ/
+    - xform/[iu]ang$/Ⓛ/
+    - xform/(.)ang$/$1Ⓗ/
+    - xform/ian$/Ⓜ/
+    - xform/(.)an$/$1Ⓙ/
+    - xform/(.)ou$/$1Ⓩ/
+    - xform/[iu]a$/Ⓧ/
+    - xform/iao$/Ⓝ/
+    - xform/(.)ao$/$1Ⓒ/
+    - xform/ui$/Ⓥ/
+    - xform/in$/Ⓑ/
+    - xlit/ⓆⓌⓇⓉⓎⓊⒾⓄⓅⓈⒹⒻⒼⒽⒿⓀⓁⓏⓍⒸⓋⒷⓃⓂ/qwrtyuiopsdfghjklzxcvbnm/
+
+algebra_sogou: 
+  __append:
+    - xlit/āáǎàōóǒòēéěèīíǐìūúǔùǖǘǚǜü/aaaaooooeeeeiiiiuuuuvvvvv/
+    - xform/ń|ň|ǹ/en/
+    - xform/\bn\b/en/
+    - xform/ńg|ňg|ǹg/en/
+    - derive/^([jqxy])u$/$1v/
+    - derive/^([aoe].*)$/o$1/
+    - xform/^([ae])(.*)$/$1$1$2/
+    - xform/iu$/Ⓠ/
+    - xform/[iu]a$/Ⓦ/
+    - xform/er$|[uv]an$/Ⓡ/
+    - xform/[uv]e$/Ⓣ/
+    - xform/v$|uai$/Ⓨ/
+    - xform/^sh/Ⓤ/
+    - xform/^ch/Ⓘ/
+    - xform/^zh/Ⓥ/
+    - xform/uo$/Ⓞ/
+    - xform/[uv]n$/Ⓟ/
+    - xform/(.)i?ong$/$1Ⓢ/
+    - xform/[iu]ang$/Ⓓ/
+    - xform/(.)en$/$1Ⓕ/
+    - xform/(.)eng$/$1Ⓖ/
+    - xform/(.)ang$/$1Ⓗ/
+    - xform/ian$/Ⓜ/
+    - xform/(.)an$/$1Ⓙ/
+    - xform/iao$/Ⓒ/
+    - xform/(.)ao$/$1Ⓚ/
+    - xform/(.)ai$/$1Ⓛ/
+    - xform/(.)ei$/$1Ⓩ/
+    - xform/ie$/Ⓧ/
+    - xform/ui$/Ⓥ/
+    - xform/(.)ou$/$1Ⓑ/
+    - xform/in$/Ⓝ/
+    - xform/ing$/;/
+    - xlit/ⓆⓌⓇⓉⓎⓊⒾⓄⓅⓈⒹⒻⒼⒽⓂⒿⒸⓀⓁⓏⓍⓋⒷⓃ/qwrtyuiopsdfghmjcklzxvbn/
+
+algebra_mspy: 
+  __append:
+    - xlit/āáǎàōóǒòēéěèīíǐìūúǔùǖǘǚǜü/aaaaooooeeeeiiiiuuuuvvvvv/
+    - xform/ń|ň|ǹ/en/
+    - xform/\bn\b/en/
+    - xform/ńg|ňg|ǹg/en/
+    - derive/^([jqxy])u$/$1v/
+    - derive/^([aoe].*)$/o$1/
+    - xform/^([ae])(.*)$/$1$1$2/
+    - xform/iu$/Ⓠ/
+    - xform/[iu]a$/Ⓦ/
+    - xform/er$|[uv]an$/Ⓡ/
+    - xform/[uv]e$/Ⓣ/
+    - xform/v$|uai$/Ⓨ/
+    - xform/^sh/Ⓤ/
+    - xform/^ch/Ⓘ/
+    - xform/^zh/Ⓥ/
+    - xform/uo$/Ⓞ/
+    - xform/[uv]n$/Ⓟ/
+    - xform/(.)i?ong$/$1Ⓢ/
+    - xform/[iu]ang$/Ⓓ/
+    - xform/(.)en$/$1Ⓕ/
+    - xform/(.)eng$/$1Ⓖ/
+    - xform/(.)ang$/$1Ⓗ/
+    - xform/ian$/Ⓜ/
+    - xform/(.)an$/$1Ⓙ/
+    - xform/iao$/Ⓒ/
+    - xform/(.)ao$/$1Ⓚ/
+    - xform/(.)ai$/$1Ⓛ/
+    - xform/(.)ei$/$1Ⓩ/
+    - xform/ie$/Ⓧ/
+    - xform/ui$/Ⓥ/
+    - derive/Ⓣ$/Ⓥ/
+    - xform/(.)ou$/$1Ⓑ/
+    - xform/in$/Ⓝ/
+    - xform/ing$/;/
+    - xlit/ⓆⓌⓇⓉⓎⓊⒾⓄⓅⓈⒹⒻⒼⒽⓂⒿⒸⓀⓁⓏⓍⓋⒷⓃ/qwrtyuiopsdfghmjcklzxvbn/
+
+algebra_abc: 
+  __append:
+    - xlit/āáǎàōóǒòēéěèīíǐìūúǔùǖǘǚǜü/aaaaooooeeeeiiiiuuuuvvvvv/
+    - xform/ń|ň|ǹ/en/
+    - xform/\bn\b/en/
+    - xform/ńg|ňg|ǹg/en/
+    - xform/^zh/Ⓐ/
+    - xform/^ch/Ⓔ/
+    - xform/^sh/Ⓥ/
+    - xform/^([aoe].*)$/Ⓞ$1/
+    - xform/ei$/Ⓠ/
+    - xform/ian$/Ⓦ/
+    - xform/er$|iu$/Ⓡ/
+    - xform/[iu]ang$/Ⓣ/
+    - xform/ing$/Ⓨ/
+    - xform/uo$/Ⓞ/
+    - xform/uan$/Ⓟ/
+    - xform/(.)i?ong$/$1Ⓢ/
+    - xform/[iu]a$/Ⓓ/
+    - xform/en$/Ⓕ/
+    - xform/eng$/Ⓖ/
+    - xform/ang$/Ⓗ/
+    - xform/an$/Ⓙ/
+    - xform/iao$/Ⓩ/
+    - xform/ao$/Ⓚ/
+    - xform/in$|uai$/Ⓒ/
+    - xform/ai$/Ⓛ/
+    - xform/ie$/Ⓧ/
+    - xform/ou$/Ⓑ/
+    - xform/un$/Ⓝ/
+    - xform/[uv]e$|ui$/Ⓜ/
+    - xlit/ⓆⓌⒺⓇⓉⓎⓄⓅⒶⓈⒹⒻⒼⒽⒿⓀⓁⓏⓍⒸⓋⒷⓃⓂ/qwertyopasdfghjklzxcvbnm/
+
+algebra_ziguang: 
+  __append:
+    - xlit/āáǎàōóǒòēéěèīíǐìūúǔùǖǘǚǜü/aaaaooooeeeeiiiiuuuuvvvvv/
+    - xform/ń|ň|ǹ/en/
+    - xform/\bn\b/en/
+    - xform/ńg|ňg|ǹg/en/
+    - derive/^([jqxy])u$/$1v/
+    - xform/^([aoe].*)$/Ⓞ$1/  # 添上固定的零聲母o，先標記爲大寫O
+    - xform/en$/Ⓦ/
+    - xform/eng$/Ⓣ/
+    - xform/in$|uai$/Ⓨ/
+    - xform/^zh/Ⓤ/
+    - xform/^sh/Ⓘ/
+    - xform/uo$/Ⓞ/
+    - xform/ai$/Ⓟ/
+    - xform/^ch/Ⓐ/
+    - xform/[iu]ang$/Ⓖ/
+    - xform/ang$/Ⓢ/  # ang should be placed after iang/uang
+    - xform/ie$/Ⓓ/
+    - xform/ian$/Ⓕ/
+    - xform/(.)i?ong$/$1Ⓗ/
+    - xform/er$|iu$/Ⓙ/
+    - xform/ei$/Ⓚ/
+    - xform/uan$/Ⓛ/
+    - xform/ing$/;/
+    - xform/ou$/Ⓩ/
+    - xform/[iu]a$/Ⓧ/
+    - xform/iao$/Ⓑ/
+    - xform/ue$|ui$|ve$/Ⓝ/
+    - xform/un$/Ⓜ/
+    - xform/ao$/Ⓠ/ # ao should be placed after iao
+    - xform/an$/Ⓡ/ # an should be placed after uan/ian
+    - xlit/ⓌⓉⓎⓊⒾⓄⓅⒶⒼⓈⒹⒻⒽⒿⓀⓁⓏⓍⒷⓃⓂⓆⓇ/wtyuiopagsdfhjklzxbnmqr/
+
+algebra_lx17:
+  __append:
+    - xlit/āáǎàōóǒòēéěèīíǐìūúǔùǖǘǚǜü/aaaaooooeeeeiiiiuuuuvvvvv/
+    - xform/ń|ň|ǹ/en/
+    - xform/\bn\b/en/
+    - xform/ńg|ňg|ǹg/en/
+    - erase/^xx$/
+    - derive/^([jqxy])u$/$1Ⓥ/
+    - xform/^ch/Ⓒ/
+    - xform/^c/Ⓕ/
+    - xform/^k/Ⓙ/
+    - xform/^([aoe].*)$/Ⓠ$1/
+    - xform/^p/Ⓗ/
+    - xform/^r/Ⓝ/
+    - xform/^sh/Ⓢ/
+    - xform/^s/Ⓜ/
+    - xform/^zh/Ⓩ/
+    - xform/^z/Ⓦ/
+    - xform/uang$/Ⓠ/
+    - xform/iang$/Ⓒ/
+    - xform/iong$/Ⓑ/
+    - xform/ang$/Ⓩ/
+    - xform/eng$/Ⓨ/
+    - xform/ian$/Ⓠ/
+    - xform/iao$/Ⓩ/
+    - xform/ing$/Ⓨ/
+    - xform/ong$/Ⓣ/
+    - xform/uai$/Ⓧ/
+    - xform/uan$/Ⓧ/
+    - xform/ai$/Ⓛ/
+    - xform/an$/Ⓝ/
+    - xform/ao$/Ⓑ/
+    - xform/ei$/Ⓖ/
+    - xform/en$/Ⓢ/
+    - xform/er$/Ⓣ/
+    - xform/ua$/Ⓗ/
+    - xform/ie$/Ⓜ/
+    - xform/in$/Ⓢ/
+    - xform/iu$/Ⓕ/
+    - xform/ou$/Ⓕ/
+    - xform/ia$/Ⓗ/
+    - xform/[uv]e$/Ⓛ/
+    - xform/ui$/Ⓒ/
+    - xform/un$/Ⓖ/
+    - xform/uo$/Ⓜ/
+    - xform/a$/Ⓗ/
+    - xform/e$/Ⓦ/
+    - xform/i$/Ⓙ/
+    - xform/o$/Ⓧ/
+    - xform/u$/Ⓓ/
+    - xform/v$/Ⓧ/
+    - xlit/ⓆⓌⒺⓇⓉⓎⓄⓅⒶⓈⒹⒻⒼⒽⒿⓀⓁⓏⓍⒸⓋⒷⓃⓂ/qwertyopasdfghjklzxcvbnm/
